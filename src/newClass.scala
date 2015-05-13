@@ -1,22 +1,18 @@
-import scala.math.random
 
 import org.apache.spark._
 
-
-/** Computes an approximation to pi */
 object newClass {
   def main(args: Array[String]) {
-    val conf = new SparkConf().setAppName("Spark Pi")
-      .setMaster("local[1]")
-    val spark = new SparkContext(conf)
-    val slices = if (args.length > 0) args(0).toInt else 2
-    val n = math.min(100000L * slices, Int.MaxValue).toInt // avoid overflow
-    val count = spark.parallelize(1 until n, slices).map { i =>
-        val x = random * 2 - 1
-        val y = random * 2 - 1
-        if (x*x + y*y < 1) 1 else 0
-      }.reduce(_ + _)
-    println("Pi is roughly " + 4.0 * count / n)
+    val conf = new SparkConf().setAppName("data")
+      .setMaster("local[1]")                                       // Setting spark settings for 1 core
+    val spark = new SparkContext(conf)                             // Creating a spark instance
+    val textFile = spark.textFile("""C:\\urltest.txt""")           // Load in text file with million digits of pi
+    val processed = textFile.flatMap(line => line.split(""))       // Create array of stringed characters
+    val counts = processed.map(word => (word, 1))                  // Give each character a value of 1 mapped into tuple
+      .reduceByKey(_ + _)                                          // Merge together same characters and value++
+    counts.filter(x => x._1 != " " && x._1 != "")                  // Filter out spaces and null characters
+      .sortByKey()                                                 // Sort the results by digit
+      .foreach(counts => println(counts._1 + " : " + counts._2))   // Print the result
     spark.stop()
   }
 }
